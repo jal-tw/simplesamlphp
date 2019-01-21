@@ -25,31 +25,34 @@ class XML
      *
      * @throws \InvalidArgumentException If $message is not a string or $type is not a string containing one of the
      *     values allowed.
-     * @throws \SimpleSAML_Error_Exception If $message contains a doctype declaration.
+     * @throws \SimpleSAML\Error\Exception If $message contains a doctype declaration.
+     *
+     * @return void
      *
      * @author Olav Morken, UNINETT AS <olav.morken@uninett.no>
      * @author Jaime Perez, UNINETT AS <jaime.perez@uninett.no>
      */
     public static function checkSAMLMessage($message, $type)
     {
-        $allowed_types = array('saml20', 'saml11', 'saml-meta');
-        if (!(is_string($message) && in_array($type, $allowed_types))) {
+        $allowed_types = ['saml20', 'saml11', 'saml-meta'];
+        if (!(is_string($message) && in_array($type, $allowed_types, true))) {
             throw new \InvalidArgumentException('Invalid input parameters.');
         }
 
         // a SAML message should not contain a doctype-declaration
         if (strpos($message, '<!DOCTYPE') !== false) {
-            throw new \SimpleSAML_Error_Exception('XML contained a doctype declaration.');
+            throw new \SimpleSAML\Error\Exception('XML contained a doctype declaration.');
         }
 
         // see if debugging is enabled for XML validation
-        $debug = \SimpleSAML_Configuration::getInstance()->getArrayize('debug', array('validatexml' => false));
-        $enabled = \SimpleSAML_Configuration::getInstance()->getBoolean('debug.validatexml', false);
+        $debug = \SimpleSAML\Configuration::getInstance()->getArrayize('debug', ['validatexml' => false]);
+        $enabled = \SimpleSAML\Configuration::getInstance()->getBoolean('debug.validatexml', false);
 
         if (!(in_array('validatexml', $debug, true) // implicitly enabled
-              || (array_key_exists('validatexml', $debug) && $debug['validatexml'] === true) // explicitly enabled
-              // TODO: deprecate this option and remove it in 2.0
-              || $enabled // old 'debug.validatexml' configuration option
+            || (array_key_exists('validatexml', $debug) && $debug['validatexml'] === true)
+            // explicitly enabled
+            // TODO: deprecate this option and remove it in 2.0
+            || $enabled // old 'debug.validatexml' configuration option
         )) {
             // XML validation is disabled
             return;
@@ -85,6 +88,8 @@ class XML
      *
      * @throws \InvalidArgumentException If $type is not a string or $message is neither a string nor a \DOMElement.
      *
+     * @return void
+     *
      * @author Olav Morken, UNINETT AS <olav.morken@uninett.no>
      */
     public static function debugSAMLMessage($message, $type)
@@ -94,12 +99,13 @@ class XML
         }
 
         // see if debugging is enabled for SAML messages
-        $debug = \SimpleSAML_Configuration::getInstance()->getArrayize('debug', array('saml' => false));
+        $debug = \SimpleSAML\Configuration::getInstance()->getArrayize('debug', ['saml' => false]);
 
         if (!(in_array('saml', $debug, true) // implicitly enabled
-              || (array_key_exists('saml', $debug) && $debug['saml'] === true) // explicitly enabled
-              // TODO: deprecate the old style and remove it in 2.0
-              || (array_key_exists(0, $debug) && $debug[0] === true) // old style 'debug'
+            || (array_key_exists('saml', $debug) && $debug['saml'] === true)
+            // explicitly enabled
+            // TODO: deprecate the old style and remove it in 2.0
+            || (array_key_exists(0, $debug) && $debug[0] === true) // old style 'debug'
         )) {
             // debugging messages is disabled
             return;
@@ -139,15 +145,17 @@ class XML
      * This function takes in a DOM element, and inserts whitespace to make it more readable. Note that whitespace
      * added previously will be removed.
      *
-     * @param \DOMElement $root The root element which should be formatted.
+     * @param \DOMNode $root The root element which should be formatted.
      * @param string      $indentBase The indentation this element should be assumed to have. Defaults to an empty
      *     string.
      *
      * @throws \InvalidArgumentException If $root is not a DOMElement or $indentBase is not a string.
      *
+     * @return void
+     *
      * @author Olav Morken, UNINETT AS <olav.morken@uninett.no>
      */
-    public static function formatDOMElement(\DOMElement $root, $indentBase = '')
+    public static function formatDOMElement(\DOMNode $root, $indentBase = '')
     {
         if (!is_string($indentBase)) {
             throw new \InvalidArgumentException('Invalid input parameters');
@@ -155,9 +163,10 @@ class XML
 
         // check what this element contains
         $fullText = ''; // all text in this element
-        $textNodes = array(); // text nodes which should be deleted
-        $childNodes = array(); // other child nodes
+        $textNodes = []; // text nodes which should be deleted
+        $childNodes = []; // other child nodes
         for ($i = 0; $i < $root->childNodes->length; $i++) {
+            /** @var \DOMElement $child */
             $child = $root->childNodes->item($i);
 
             if ($child instanceof \DOMText) {
@@ -276,9 +285,10 @@ class XML
             throw new \InvalidArgumentException('Invalid input parameters.');
         }
 
-        $ret = array();
+        $ret = [];
 
         for ($i = 0; $i < $element->childNodes->length; $i++) {
+            /** @var \DOMElement $child */
             $child = $element->childNodes->item($i);
 
             // skip text nodes and comment elements
@@ -301,23 +311,19 @@ class XML
      * @param \DOMElement $element The element we should extract text from.
      *
      * @return string The text content of the element.
-     * @throws \InvalidArgumentException If $element is not an instance of DOMElement.
-     * @throws \SimpleSAML_Error_Exception If the element contains a non-text child node.
+     * @throws \SimpleSAML\Error\Exception If the element contains a non-text child node.
      *
      * @author Olav Morken, UNINETT AS <olav.morken@uninett.no>
      */
     public static function getDOMText(\DOMElement $element)
     {
-        if (!($element instanceof \DOMElement)) {
-            throw new \InvalidArgumentException('Invalid input parameters');
-        }
-
         $txt = '';
 
         for ($i = 0; $i < $element->childNodes->length; $i++) {
+            /** @var \DOMElement $child */
             $child = $element->childNodes->item($i);
             if (!($child instanceof \DOMText)) {
-                throw new \SimpleSAML_Error_Exception($element->localName.' contained a non-text child node.');
+                throw new \SimpleSAML\Error\Exception($element->localName.' contained a non-text child node.');
             }
 
             $txt .= $child->wholeText;
@@ -360,7 +366,7 @@ class XML
         // check if the namespace is a shortcut, and expand it if it is
         if ($nsURI[0] === '@') {
             // the defined shortcuts
-            $shortcuts = array(
+            $shortcuts = [
                 '@ds'      => 'http://www.w3.org/2000/09/xmldsig#',
                 '@md'      => 'urn:oasis:names:tc:SAML:2.0:metadata',
                 '@saml1'   => 'urn:oasis:names:tc:SAML:1.0:assertion',
@@ -369,7 +375,7 @@ class XML
                 '@saml2'   => 'urn:oasis:names:tc:SAML:2.0:assertion',
                 '@saml2p'  => 'urn:oasis:names:tc:SAML:2.0:protocol',
                 '@shibmd'  => 'urn:mace:shibboleth:metadata:1.0',
-            );
+            ];
 
             // check if it is a valid shortcut
             if (!array_key_exists($nsURI, $shortcuts)) {
@@ -425,10 +431,10 @@ class XML
         }
 
         if ($res) {
-
-            $config = \SimpleSAML_Configuration::getInstance();
-            $schemaPath = $config->resolvePath('schemas').'/';
-            $schemaFile = $schemaPath.$schema;
+            $config = \SimpleSAML\Configuration::getInstance();
+            /** @var string $schemaPath */
+            $schemaPath = $config->resolvePath('schemas');
+            $schemaFile = $schemaPath.'/'.$schema;
 
             $res = $dom->schemaValidate($schemaFile);
             if ($res) {
